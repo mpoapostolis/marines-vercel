@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model marines {
+  id       String  @id @default(dbgenerated())
+  name     String?
+  spots_id String?
+  spots    spots?  @relation(fields: [spots_id], references: [id])
+  users    users[]
+}
+
+model services {
+  id          String  @id @default(dbgenerated())
+  name        String?
+  price       Float?
+  description String?
+}
+
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String?
+  auth_srid Int?
+  srtext    String?
+  proj4text String?
+}
+
+model spots {
+  id        String    @id @default(dbgenerated())
+  name      String?
+  price     Float?
+  available Boolean?  @default(true)
+  // This type is currently not supported.
+  // geom   geography
+  // This type is currently not supported.
+  // coords point?
+  marines   marines[]
+}
+
+model users {
+  id           String    @id @default(dbgenerated())
+  marines_id   String?
+  first_name   String?
+  last_name    String?
+  avatar       String?
+  email        String?
+  gender       gender?
+  birthday     DateTime?
+  user_name    String?
+  password     String?
+  fb_id        String?
+  date_created DateTime  @default(now())
+  marines      marines?  @relation(fields: [marines_id], references: [id])
+}
+
+enum gender {
+  female
+  male
+}
