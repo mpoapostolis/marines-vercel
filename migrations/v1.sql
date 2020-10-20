@@ -7,26 +7,24 @@ CREATE TYPE gender AS ENUM (
 );
 
 
-
 CREATE TABLE IF NOT EXISTS marines (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name varchar(64),
-    spots_id uuid,
-    FOREIGN KEY (spots_id) REFERENCES spots(id) ON UPDATE CASCADE,
     date_created timestamp NOT NULL DEFAULT NOW()
 );
-
 
 CREATE TABLE IF NOT EXISTS spots (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name varchar(64),
     price  real,
+    marine_id uuid NOt NULL,
     length real NOT NULL,
     draught real NOT NULL,
     available boolean DEFAULT TRUE,
-    geom geography (point) NOT NULL,
+    geom geography (point),
     coords point,
-    date_created timestamp NOT NULL DEFAULT NOW()
+    date_created timestamp NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (marine_id) REFERENCES marines(id) ON UPDATE CASCADE
 );
 
 
@@ -52,18 +50,17 @@ CREATE TABLE users(
     user_name varchar(64),
     password varchar(64),
     fb_id varchar(64),
-    date_created timestamp NOT NULL DEFAULT NOW(),  
-    FOREIGN KEY (marines_id) REFERENCES marines(id) ON UPDATE CASCADE
-    FOREIGN KEY (vessels_id) REFERENCES vessels(id) ON UPDATE CASCADE
-
+    date_created timestamp NOT NULL DEFAULT NOW()  
 );
 
 CREATE TABLE IF NOT EXISTS vessels (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid,
     name varchar(64),
     length real NOT NULL,
     draught real NOT NULL,
     description  varchar(1024),
-    date_created timestamp NOT NULL DEFAULT NOW()
+    date_created timestamp NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE
 );
 

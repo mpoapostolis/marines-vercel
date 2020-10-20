@@ -7,19 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model marines {
-  id       String  @id @default(dbgenerated())
-  name     String?
-  spots_id String?
-  spots    spots?  @relation(fields: [spots_id], references: [id])
-  users    users[]
-}
-
 model services {
-  id          String  @id @default(dbgenerated())
-  name        String?
-  price       Float?
-  description String?
+  id           String   @id @default(dbgenerated())
+  name         String?
+  price        Float?
+  description  String?
+  date_created DateTime @default(now())
 }
 
 model spatial_ref_sys {
@@ -31,20 +24,25 @@ model spatial_ref_sys {
 }
 
 model spots {
-  id        String    @id @default(dbgenerated())
-  name      String?
-  price     Float?
-  available Boolean?  @default(true)
+  id           String     @id @default(dbgenerated())
+  name         String?
+  price        Float?
+  marine_id    String
+  length       Float
+  draught      Float
+  available    Boolean?   @default(true)
   // This type is currently not supported.
-  // geom   geography
+  // geom      geography?
   // This type is currently not supported.
-  // coords point?
-  marines   marines[]
+  // coords    point?
+  date_created DateTime   @default(now())
+  marines      marines    @relation(fields: [marine_id], references: [id])
 }
 
 model users {
   id           String    @id @default(dbgenerated())
   marines_id   String?
+  vessels_id   String?
   first_name   String?
   last_name    String?
   avatar       String?
@@ -55,7 +53,25 @@ model users {
   password     String?
   fb_id        String?
   date_created DateTime  @default(now())
-  marines      marines?  @relation(fields: [marines_id], references: [id])
+  vessels      vessels[]
+}
+
+model vessels {
+  id           String   @id @default(dbgenerated())
+  user_id      String?
+  name         String?
+  length       Float
+  draught      Float
+  description  String?
+  date_created DateTime @default(now())
+  users        users?   @relation(fields: [user_id], references: [id])
+}
+
+model marines {
+  id           String   @id @default(dbgenerated())
+  name         String?
+  date_created DateTime @default(now())
+  spots        spots[]
 }
 
 enum gender {
