@@ -7,12 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model marines {
+  id           String     @id @default(dbgenerated())
+  name         String?
+  date_created DateTime   @default(now())
+  services     services[]
+  spots        spots[]
+}
+
 model services {
   id           String   @id @default(dbgenerated())
+  marine_id    String?
   name         String?
   price        Float?
   description  String?
   date_created DateTime @default(now())
+  marines      marines? @relation(fields: [marine_id], references: [id])
 }
 
 model spatial_ref_sys {
@@ -41,8 +51,6 @@ model spots {
 
 model users {
   id           String    @id @default(dbgenerated())
-  marines_id   String?
-  vessels_id   String?
   first_name   String?
   last_name    String?
   avatar       String?
@@ -65,13 +73,6 @@ model vessels {
   description  String?
   date_created DateTime @default(now())
   users        users?   @relation(fields: [user_id], references: [id])
-}
-
-model marines {
-  id           String   @id @default(dbgenerated())
-  name         String?
-  date_created DateTime @default(now())
-  spots        spots[]
 }
 
 enum gender {

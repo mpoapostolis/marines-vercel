@@ -30,17 +30,17 @@ CREATE TABLE IF NOT EXISTS spots (
 
 CREATE TABLE IF NOT EXISTS services (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    marine_id uuid,
     name varchar(64),
     price  real,
     description  varchar(1024),
-    date_created timestamp NOT NULL DEFAULT NOW()
+    date_created timestamp NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (marine_id) REFERENCES marines(id) ON UPDATE CASCADE
 );
 
 
 CREATE TABLE users(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4 (),
-    marines_id uuid,
-    vessels_id uuid,
     first_name varchar(64),
     last_name varchar(64),
     avatar varchar(256),
