@@ -17,12 +17,12 @@ CREATE TABLE IF NOT EXISTS spots (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name varchar(64),
     price  real,
-    marine_id uuid NOt NULL,
+    marine_id uuid NOT NULL,
     length real NOT NULL,
     draught real NOT NULL,
     available boolean DEFAULT TRUE,
     geom geography (point),
-    coords point,
+    coords int[2],
     date_created timestamp NOT NULL DEFAULT NOW(),
     FOREIGN KEY (marine_id) REFERENCES marines(id) ON UPDATE CASCADE
 );

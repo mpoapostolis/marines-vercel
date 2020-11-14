@@ -43,8 +43,7 @@ model spots {
   available    Boolean?   @default(true)
   // This type is currently not supported.
   // geom      geography?
-  // This type is currently not supported.
-  // coords    point?
+  coords       Int[]
   date_created DateTime   @default(now())
   marines      marines    @relation(fields: [marine_id], references: [id])
 }
