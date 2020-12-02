@@ -3,9 +3,8 @@ const prisma = new PrismaClient();
 
 export async function getMarines() {
   return await prisma.marines.findMany({
-    select: {
-      id: true,
-      spots: {},
+    include: {
+      spots: true,
     },
   });
 }
