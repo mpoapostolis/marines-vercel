@@ -11,9 +11,11 @@ export default async function (req: NowRequest, res: NowResponse) {
       }
       break;
 
-    case "POST":
+    case "DELETE":
       try {
-        res.status(201).json(await marineService.createMarine(req.body.name));
+        res
+          .status(202)
+          .json(await marineService.deleteMarineById(`${req.query.id}`));
       } catch (error) {
         res.status(400).json(error);
       }
