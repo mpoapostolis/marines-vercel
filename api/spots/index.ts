@@ -1,10 +1,16 @@
 import { NowRequest, NowResponse } from "@vercel/node";
 import * as spotService from "../../services/spotService";
+import { getCursorOffset } from "../../utils";
 
 export default async function (req: NowRequest, res: NowResponse) {
+  const params = getCursorOffset(req);
   switch (req.method) {
     case "GET":
-      res.status(200).json(await spotService.getSpots(req.query.coords));
+      if (req.query.marine_id) {
+        res.json(await spotService.getMySpots({ ...params }));
+      } else {
+        res.status(200).json(await spotService.getSpots(req.query.coords));
+      }
 
       break;
 

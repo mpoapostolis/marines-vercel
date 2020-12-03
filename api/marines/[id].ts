@@ -4,11 +4,8 @@ import * as marineService from "../../services/marineService";
 export default async function (req: NowRequest, res: NowResponse) {
   switch (req.method) {
     case "GET":
-      try {
-        res.json(await marineService.getMarineById(`${req.query.id}`));
-      } catch (error) {
-        res.status(404).json({ msg: "vessel id not found" });
-      }
+      res.json(await marineService.getMarineById(`${req.query.id}`));
+
       break;
 
     case "DELETE":
