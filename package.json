@@ -11,9 +11,12 @@
   "license": "ISC",
   "devDependencies": {
     "@prisma/cli": "^2.9.0",
+    "@types/mongodb": "^3.6.3",
     "@vercel/node": "^1.8.4"
   },
   "dependencies": {
-    "@prisma/client": "^2.9.0"
+    "@prisma/client": "^2.9.0",
+    "faunadb": "^4.0.0",
+    "mongodb": "^3.6.3"
   }
 }

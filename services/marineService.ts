@@ -1,28 +1,32 @@
 import { PrismaClient } from "@prisma/client";
 import { OffsetLimitType } from "../utils";
 const prisma = new PrismaClient();
+import faunadb, { query as q } from "faunadb";
+
+var adminClient = new faunadb.Client({
+  secret: "fnAD8u47AOACB8eyemkCLFhw8XFJH0jJZcD5DZML",
+});
 
 export async function getMarines(params: OffsetLimitType) {
-  const data = await prisma.marines.findMany({
-    take: params.limit,
-    skip: params.offset,
-    include: {
-      spots: true,
-    },
-  });
-  const total = await prisma.marines.count();
-  return {
-    data,
-    total,
-  };
-}
-
-export async function getMarineById(id: string) {
-  return await prisma.marines.findOne({
-    where: {
-      id,
-    },
-  });
+  return await adminClient.query(
+    q.Map(
+      q.Paginate(q.Match(q.Index("get_all_marines")), {
+        size: 10,
+      }),
+      q.Lambda(
+        "ref",
+        q.Let(
+          {
+            ref: q.Get(q.Var("ref")),
+          },
+          {
+            id: q.Select(["ref", "id"], q.Var("ref")),
+            name: q.Select(["data", "name"], q.Var("ref")),
+          }
+        )
+      )
+    )
+  );
 }
 
 export async function deleteMarineById(id: string) {
@@ -33,10 +37,10 @@ export async function deleteMarineById(id: string) {
   });
 }
 
-export async function createMarine(marineName: string) {
-  return await prisma.marines.create({
-    data: {
-      name: marineName,
-    },
-  });
+export async function createMarine(name: string) {
+  return await adminClient.query(
+    q.Create(q.Collection("marines"), {
+      data: { name },
+    })
+  );
 }

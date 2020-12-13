@@ -7,9 +7,9 @@ export default async function (req: NowRequest, res: NowResponse) {
   switch (req.method) {
     case "GET":
       if (req.query.marine_id) {
-        res.json(await spotService.getMySpots({ ...params }));
+        // res.json(await spotService.getMySpots());
       } else {
-        res.status(200).json(await spotService.getSpots(req.query.coords));
+        res.status(200).json(await spotService.getSpots());
       }
 
       break;
