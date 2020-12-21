@@ -2,9 +2,27 @@ import { ObjectID } from "mongodb";
 import * as yup from "yup";
 import bcrypt from "bcrypt";
 import { connectToDatabase } from "../mongoHelper";
+import { permissions } from "../permissions";
+import { generateToken, getLoginResponse } from "../token";
+import { NowRequest, NowResponse } from "@vercel/node";
 
-export async function getUsers() {
-  return {};
+export async function login(req: NowRequest, res: NowResponse) {
+  const db = await connectToDatabase();
+  const err = () =>
+    res.status(400).json({ msg: "username or password is not correct" });
+
+  const existingUser = await db
+    .collection("users")
+    .findOne({ userName: req.body.userName });
+  if (existingUser) {
+    const correctPass = bcrypt.compareSync(
+      req.body.password,
+      existingUser.password
+    );
+
+    if (correctPass) res.json(await getLoginResponse(existingUser));
+    else err();
+  } else err();
 }
 
 export async function getUserById(id: string) {
@@ -27,10 +45,13 @@ export async function createUser(body) {
   if (!isValid) return { [user.path]: user.message };
 
   const db = await connectToDatabase();
-  const existingMarine = await db
-    .collection("marines")
-    .findOne({ _id: new ObjectID(body.marineId) });
-  if (!existingMarine) return { msg: "Invalid marine id" };
+
+  if (user.marineId) {
+    const existingMarine = await db
+      .collection("marines")
+      .findOne({ _id: new ObjectID(body.marineId) });
+    if (!existingMarine) return { msg: "Invalid marine id" };
+  }
 
   const existingUser = await db
     .collection("users")
@@ -39,7 +60,13 @@ export async function createUser(body) {
 
   const password = await bcrypt.hash(user.password, 10);
 
-  await (await db.collection("users").insertOne({ ...user, password })).ops;
+  await (
+    await db.collection("users").insertOne({
+      ...user,
+      password,
+      permissions: user.marineId ? permissions.marine : permissions.user,
+    })
+  ).ops;
 
   return { msg: "user created successfully" };
 }
