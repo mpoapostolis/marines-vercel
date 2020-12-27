@@ -1,23 +1,58 @@
+import { NowRequest, NowResponse } from "@vercel/node";
+import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongoHelper";
-import { OffsetLimitType } from "../utils";
+import { validateToken } from "../token";
+import * as yup from "yup";
+import { getCursorOffset } from "../utils";
 
-export async function getMarines(params: OffsetLimitType) {
+export async function getMarines(req: NowRequest, res: NowResponse) {
+  await validateToken(req, res, "view:marines");
+  const params = getCursorOffset(req);
+
   const db = await connectToDatabase();
   const response = await db
-    .collection("spots")
+    .collection("marines")
     .find({})
     .skip(params.offset)
     .limit(params.limit);
   const data = await response.toArray();
   const total = await response.count();
-
-  return { data, total };
+  res.json({ data, total });
 }
 
-export async function deleteMarineById(id: string) {
-  return await {};
+export async function deleteMarineById(req: NowRequest, res: NowResponse) {
+  await validateToken(req, res, "edit:marines");
+  const db = await connectToDatabase();
+  await db.collection("marines").deleteOne({
+    _id: new ObjectId(`${req.query.id}`),
+  });
+  res.status(204).send("marine deletedmarine deleted successfully");
 }
 
-export async function createMarine(name: string) {
-  return await {};
+export async function getMarineById(req: NowRequest, res: NowResponse) {
+  await validateToken(req, res, "view:marines");
+  const db = await connectToDatabase();
+  const data = await db.collection("marines").findOne({
+    _id: new ObjectId(`${req.query.id}`),
+  });
+  res.json(data);
+}
+
+export async function createMarine(req: NowRequest, res: NowResponse) {
+  await validateToken(req, res, "edit:marines");
+  const db = await connectToDatabase();
+  const id = await db.collection("marines").insertOne({ ...req.body });
+  res.json(id.ops[0]);
+}
+
+export async function updateMarine(req: NowRequest, res: NowResponse) {
+  await validateToken(req, res, "edit:marines");
+  const db = await connectToDatabase();
+  const id = await db.collection("marines").updateOne(
+    {
+      _id: new ObjectId(`${req.query.id}`),
+    },
+    { $set: { ...req.body } }
+  );
+  res.json(id);
 }

@@ -3,7 +3,7 @@ import * as yup from "yup";
 import bcrypt from "bcrypt";
 import { connectToDatabase } from "../mongoHelper";
 import { permissions } from "../permissions";
-import { generateToken, getLoginResponse } from "../token";
+import { getLoginResponse } from "../token";
 import { NowRequest, NowResponse } from "@vercel/node";
 
 export async function login(req: NowRequest, res: NowResponse) {
@@ -23,10 +23,6 @@ export async function login(req: NowRequest, res: NowResponse) {
     if (correctPass) res.json(await getLoginResponse(existingUser));
     else err();
   } else err();
-}
-
-export async function getUserById(id: string) {
-  return {};
 }
 
 let userSchema = yup

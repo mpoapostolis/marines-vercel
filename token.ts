@@ -5,25 +5,43 @@ require("dotenv").config();
 export type UserTypeToken = {
   id: string;
   marineId?: string;
+  permissions: string[];
 };
 
 export function generateToken(obj: Record<string, any>, duration: string) {
-  const { _id, marineId } = obj;
+  const { _id, marineId, permissions } = obj;
 
-  return jwt.sign({ _id, marineId }, process.env["TOKEN"], {
+  return jwt.sign({ _id, marineId, permissions }, process.env["TOKEN"], {
     expiresIn: duration,
   });
 }
 
-export function validateToken(req: NowRequest, res: NowResponse) {
+export async function validateToken(
+  req: NowRequest,
+  res: NowResponse,
+  reqPerm?: string
+) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.status(401);
+  if (!token) res.status(401);
+  try {
+    const user = (await jwt.verify(
+      token,
+      process.env["TOKEN"]
+    )) as UserTypeToken;
 
-  jwt.verify(token, process.env["TOKEN"], (err, user: UserTypeToken) => {
-    if (err) return res.status(403);
-    req["user"] = user;
-  });
+    const doIHavePerm =
+      reqPerm && ~user.permissions.findIndex((perm) => perm === reqPerm);
+    if (!doIHavePerm) {
+      res.status(401);
+      res.json({ msg: "unothorized" });
+      return;
+    }
+    return user;
+  } catch (error) {
+    res.status(403);
+    res.json({ msg: "You don't have the required permission for this action" });
+  }
 }
 
 export async function getLoginResponse(obj: Record<string, any>) {
