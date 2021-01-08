@@ -2,7 +2,6 @@ import { NowRequest, NowResponse } from "@vercel/node";
 import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../mongoHelper";
 import { validateToken } from "../token";
-import * as yup from "yup";
 import { getCursorOffset } from "../utils";
 
 export async function getMarines(req: NowRequest, res: NowResponse) {
@@ -30,7 +29,7 @@ export async function deleteMarineById(req: NowRequest, res: NowResponse) {
 }
 
 export async function getMarineById(req: NowRequest, res: NowResponse) {
-  await validateToken(req, res, "view:marines");
+  await validateToken(req, res);
   const db = await connectToDatabase();
   const data = await db.collection("marines").findOne({
     _id: new ObjectId(`${req.query.id}`),

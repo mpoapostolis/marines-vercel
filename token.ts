@@ -3,7 +3,7 @@ import * as jwt from "jsonwebtoken";
 require("dotenv").config();
 
 export type UserTypeToken = {
-  id: string;
+  _id: string;
   marineId?: string;
   permissions: string[];
 };
@@ -30,11 +30,11 @@ export async function validateToken(
       process.env["TOKEN"]
     )) as UserTypeToken;
 
-    const doIHavePerm =
-      reqPerm && ~user.permissions.findIndex((perm) => perm === reqPerm);
-    if (!doIHavePerm) {
+    const doIHavePerm = ~user.permissions.findIndex((perm) => perm === reqPerm);
+
+    if (reqPerm && !doIHavePerm) {
       res.status(401);
-      res.json({ msg: "unothorized" });
+      res.json({ msg: "unauthorized" });
       return;
     }
     return user;
