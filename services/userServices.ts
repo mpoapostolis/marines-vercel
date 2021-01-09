@@ -1,4 +1,4 @@
-import { ObjectID } from "mongodb";
+import { ObjectId, ObjectID } from "mongodb";
 import * as yup from "yup";
 import bcrypt from "bcrypt";
 import { connectToDatabase } from "../mongoHelper";
@@ -55,14 +55,17 @@ export async function createUser(body) {
   if (existingUser) return { msg: `user ${user.userName} already exists` };
 
   const password = await bcrypt.hash(user.password, 10);
+  const userBody = {
+    ...user,
+    password,
+    permissions: user.marineId ? permissions.marine : permissions.user,
+  };
 
-  await (
-    await db.collection("users").insertOne({
-      ...user,
-      password,
-      permissions: user.marineId ? permissions.marine : permissions.user,
-    })
-  ).ops;
+  if ("marineId" in user) {
+    userBody["marineId"] = new ObjectId(user.marineId);
+  }
+
+  await (await db.collection("users").insertOne(userBody)).ops;
 
   return { msg: "user created successfully" };
 }
