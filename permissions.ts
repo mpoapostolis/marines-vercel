@@ -6,7 +6,8 @@ export const permissions = {
     "edit:marines",
     "view:reservations",
     "view:vessels",
+    "edit:vessels",
   ],
   marine: ["view:spots", "edit:spots", "view:reservations"],
-  user: ["view:spots", "view:vessels"],
+  user: ["view:spots", "view:marines", "edit:vessels", "view:vessels"],
 };

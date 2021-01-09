@@ -4,19 +4,47 @@ import { connectToDatabase } from "../mongoHelper";
 import { validateToken } from "../token";
 import { getCursorOffset } from "../utils";
 
+const params = {};
+
 export async function getSpots(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res, "view:spots");
+  const {
+    draught = Infinity,
+    from = undefined,
+    to = undefined,
+    latitude = undefined,
+    length = Infinity,
+    longitude = undefined,
+    marineId = undefined,
+    radius = Infinity,
+    width = Infinity,
+  } = req.query;
   const searchObj = user?.marineId
     ? { marineId: new ObjectId(user.marineId) }
-    : {};
+    : {
+        $and: [
+          { draught: { $lte: +draught } },
+          { length: { $lte: +length } },
+          { width: { $lte: +width } },
+        ],
+      };
 
-  const params = getCursorOffset(req);
+  if (latitude && longitude && radius) {
+    searchObj["location"] = {
+      $near: {
+        $geometry: { type: "Point", coordinates: [+longitude, +latitude] },
+        $maxDistance: +radius * 1000,
+      },
+    };
+  }
+
+  const pagenatedParams = getCursorOffset(req);
   const db = await connectToDatabase();
   const response = await db
     .collection("spots")
     .find(searchObj)
-    .skip(params.offset)
-    .limit(params.limit);
+    .skip(pagenatedParams.offset)
+    .limit(pagenatedParams.limit);
   const data = await response.toArray();
   const total = await response.count();
 
@@ -24,12 +52,11 @@ export async function getSpots(req: NowRequest, res: NowResponse) {
 }
 
 export async function getSpotById(req: NowRequest, res: NowResponse) {
-  const user = await validateToken(req, res, "view:spots");
+  await validateToken(req, res, "view:spots");
 
   const db = await connectToDatabase();
   const response = await db.collection("spots").findOne({
     _id: new ObjectId(`${req.query.id}`),
-    marineId: new ObjectId(user.marineId),
   });
   res.json(response);
 }
@@ -43,7 +70,7 @@ export async function deleteSpotById(req: NowRequest, res: NowResponse) {
       _id: new ObjectId(`${req.query.id}`),
       marineId: new ObjectId(user.marineId),
     });
-    res.status(204).send("marine deletedmarine deleted successfully");
+    res.status(204).send("spots deleted successfully");
   } catch (error) {
     res.status(400).json(error);
   }
@@ -73,6 +100,10 @@ export async function createSpot(req: NowRequest, res: NowResponse) {
   const id = await db.collection("spots").insertOne({
     ...req.body,
     marineName: marine.name,
+    location: {
+      type: "Point",
+      coordinates: [req.body.coords[0].lng, req.body.coords[1].lat],
+    },
     marineId: new ObjectId(user.marineId),
   });
 
