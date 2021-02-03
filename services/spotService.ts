@@ -4,51 +4,86 @@ import { connectToDatabase } from "../mongoHelper";
 import { validateToken } from "../token";
 import { getCursorOffset } from "../utils";
 
-const params = {};
-
-export async function getSpots(req: NowRequest, res: NowResponse) {
-  const user = await validateToken(req, res, "view:spots");
-  const {
-    draught = Infinity,
-    from = undefined,
-    to = undefined,
-    latitude = undefined,
-    length = Infinity,
-    longitude = undefined,
-    marineId = undefined,
-    radius = Infinity,
-    width = Infinity,
-  } = req.query;
-  const searchObj = user?.marineId
-    ? { marineId: new ObjectId(user.marineId) }
-    : {
-        $and: [
-          { draught: { $lte: +draught } },
-          { length: { $lte: +length } },
-          { width: { $lte: +width } },
-        ],
-      };
-
-  if (latitude && longitude && radius) {
-    searchObj["location"] = {
-      $near: {
-        $geometry: { type: "Point", coordinates: [+longitude, +latitude] },
-        $maxDistance: +radius * 1000,
-      },
-    };
-  }
+async function adminSpots(req: NowRequest, res: NowResponse) {
+  const user = await validateToken(req, res);
 
   const pagenatedParams = getCursorOffset(req);
   const db = await connectToDatabase();
   const response = await db
     .collection("spots")
-    .find(searchObj)
+    .find({ marineId: new ObjectId(user.marineId) })
     .skip(pagenatedParams.offset)
     .limit(pagenatedParams.limit);
   const data = await response.toArray();
   const total = await response.count();
 
   res.json({ data, total });
+}
+
+async function clientSpots(req: NowRequest, res: NowResponse) {
+  const {
+    draught = Infinity,
+    from = undefined,
+    to = undefined,
+    latitude = "",
+    length = Infinity,
+    longitude = "",
+    radius = 5,
+    width = Infinity,
+  } = req.query;
+
+  const db = await connectToDatabase();
+
+  const geoPipeLine = {
+    $geoNear: {
+      near: {
+        type: "Point",
+        coordinates: [
+          parseFloat(String(longitude)),
+          parseFloat(String(latitude)),
+        ],
+      },
+      maxDistance: +radius * 1000,
+      distanceField: "distance",
+      spherical: true,
+    },
+  };
+  const aggregation = [
+    {
+      $match: {
+        $and: [
+          { draught: { $lte: draught } },
+          { length: { $lte: length } },
+          { width: { $lte: width } },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: "$marineName",
+        count: { $sum: 1 },
+        distance: { $first: "$distance" },
+        name: { $first: "$marineName" },
+      },
+    },
+  ];
+
+  const response = await db
+    .collection("spots")
+    .aggregate(
+      longitude && latitude ? [geoPipeLine, ...aggregation] : aggregation
+    )
+    .toArray();
+
+  res.json(response);
+}
+
+export async function getSpots(req: NowRequest, res: NowResponse) {
+  if (req.query.type === "client") {
+    return await clientSpots(req, res);
+  } else {
+    return await adminSpots(req, res);
+  }
 }
 
 export async function getSpotById(req: NowRequest, res: NowResponse) {
