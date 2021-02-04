@@ -1,5 +1,5 @@
 import { NowRequest, NowResponse } from "@vercel/node";
-import * as spotService from "../../services/spotService";
+import * as spotService from "../services/spotService";
 
 export default async function (req: NowRequest, res: NowResponse) {
   switch (req.method) {
@@ -9,7 +9,7 @@ export default async function (req: NowRequest, res: NowResponse) {
       break;
 
     case "POST":
-      await spotService.createSpot(req, res);
+      await spotService.updateSpot(req, res);
       break;
 
     default:

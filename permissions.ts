@@ -7,7 +7,21 @@ export const permissions = {
     "view:reservations",
     "view:vessels",
     "edit:vessels",
+    "view:services",
+    "edit:services",
   ],
-  marine: ["view:spots", "edit:spots", "view:reservations"],
-  user: ["view:spots", "view:marines", "edit:vessels", "view:vessels"],
+  marine: [
+    "view:spots",
+    "edit:spots",
+    "view:reservations",
+    "view:services",
+    "edit:services",
+  ],
+  user: [
+    "view:spots",
+    "view:marines",
+    "edit:vessels",
+    "view:vessels",
+    "view:services",
+  ],
 };

@@ -29,6 +29,8 @@ async function clientSpots(req: NowRequest, res: NowResponse) {
     length = Infinity,
     longitude = "",
     radius = 5,
+    min = -Infinity,
+    max = Infinity,
     width = Infinity,
   } = req.query;
 
@@ -55,9 +57,11 @@ async function clientSpots(req: NowRequest, res: NowResponse) {
           { draught: { $lte: draught } },
           { length: { $lte: length } },
           { width: { $lte: width } },
+          { price: { $gte: +min, $lte: +max } },
         ],
       },
     },
+
     {
       $group: {
         _id: "$marineName",
@@ -112,35 +116,22 @@ export async function deleteSpotById(req: NowRequest, res: NowResponse) {
 }
 
 export async function updateSpot(req: NowRequest, res: NowResponse) {
-  await validateToken(req, res, "edit:spots");
-  const db = await connectToDatabase();
-  const { marineId, ...body } = req.body;
-  const id = await db.collection("spots").updateOne(
-    {
-      _id: new ObjectId(`${req.query.id}`),
-      marineId: new ObjectId(`${marineId}`),
-    },
-    { $set: { ...body } }
-  );
-  res.json(id);
-}
-
-export async function createSpot(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res, "edit:spots");
-
   const db = await connectToDatabase();
   const marine = await db.collection("marines").findOne({
     _id: new ObjectId(user.marineId),
   });
-  const id = await db.collection("spots").insertOne({
-    ...req.body,
-    marineName: marine.name,
-    location: {
-      type: "Point",
-      coordinates: [req.body.coords[0].lng, req.body.coords[1].lat],
-    },
+  await db.collection("spots").deleteMany({
     marineId: new ObjectId(user.marineId),
   });
-
-  res.json(id.ops[0]);
+  const docs = req.body.map((spot) => {
+    const { _id, ...rest } = spot;
+    return {
+      ...rest,
+      marineName: marine.name,
+      marineId: new ObjectId(user.marineId),
+    };
+  });
+  const id = await db.collection("spots").insertMany(docs);
+  res.json({ id });
 }
