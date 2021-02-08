@@ -45,12 +45,10 @@ export async function reserveASpot(req: NowRequest, res: NowResponse) {
     .validate(req.body)
     .catch((err) => err);
   const isValid = await getReservationParams.isValid(params);
-  if (!isValid) res.json({ [params.path]: params.message });
+  if (!isValid) res.status(400).json({ [params.path]: params.message });
 
-  const tmpArr = [req.body.fromDate, req.body.toDate];
-  const [_from, _to] = tmpArr.sort();
-  const from = startOfDay(_from);
-  const to = endOfDay(_to);
+  const from = startOfDay(params.fromDate);
+  const to = endOfDay(params.toDate);
 
   const db = await connectToDatabase();
   // need to find a date between my range
@@ -68,6 +66,7 @@ export async function reserveASpot(req: NowRequest, res: NowResponse) {
       spotId: true,
     })
     .toArray();
+
   const spot = await db
     .collection("spots")
     .find(
@@ -83,11 +82,16 @@ export async function reserveASpot(req: NowRequest, res: NowResponse) {
     .sort({ price: 1 })
     .toArray();
 
+  if (spot.length < 1)
+    return res.status(400).json({
+      msg: "not available spots",
+    });
+
   await db.collection("reservations").insertOne({
     fromDate: from,
     toDate: to,
     status: "PENDING",
-    userId: new ObjectId(req.body.userId),
+    userId: new ObjectId(params.userId),
     spotId: new ObjectId(spot[0]._id),
   });
 

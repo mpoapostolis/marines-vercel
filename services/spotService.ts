@@ -3,6 +3,8 @@ import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../helpers/mongoHelper";
 import { validateToken } from "../helpers/token";
 import { getCursorOffset } from "../helpers/utils";
+import * as yup from "yup";
+import { endOfDay, startOfDay } from "date-fns";
 
 async function adminSpots(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res);
@@ -20,45 +22,89 @@ async function adminSpots(req: NowRequest, res: NowResponse) {
   res.json({ data, total });
 }
 
+const clientSpotParam = yup
+  .object()
+  .noUnknown(true)
+  .shape({
+    fromDate: yup.number(),
+    toDate: yup.number(),
+    marineId: yup.string().min(24).max(24),
+    draught: yup.number().default(-Infinity),
+    length: yup.number().default(-Infinity),
+    radius: yup.number().default(5),
+    min: yup.number().default(-Infinity),
+    max: yup.number().default(Infinity),
+    width: yup.number().default(-Infinity),
+  });
+
 async function clientSpots(req: NowRequest, res: NowResponse) {
-  const {
-    draught = Infinity,
-    from = undefined,
-    to = undefined,
-    latitude = "",
-    length = Infinity,
-    longitude = "",
-    radius = 5,
-    min = -Infinity,
-    max = Infinity,
-    width = Infinity,
-  } = req.query;
+  const params = await clientSpotParam.validate(req.query).catch((err) => err);
+  const isValid = await clientSpotParam.isValid(params);
+  if (!isValid) res.status(400).json({ [params.path]: params.message });
 
   const db = await connectToDatabase();
+
+  const reserverdSpots =
+    params.fromDate && params.toDate
+      ? await db
+          .collection("reservations")
+          .find({
+            $or: [
+              {
+                $and: [
+                  { fromDate: { $gte: startOfDay(params.fromDate) } },
+                  { fromDate: { $lte: startOfDay(params.toDate) } },
+                ],
+              },
+              {
+                $and: [
+                  { toDate: { $gte: endOfDay(params.fromDate) } },
+                  { toDate: { $lte: endOfDay(params.toDate) } },
+                ],
+              },
+            ],
+          })
+          .project({
+            spotId: true,
+          })
+          .toArray()
+      : [];
 
   const geoPipeLine = {
     $geoNear: {
       near: {
         type: "Point",
         coordinates: [
-          parseFloat(String(longitude)),
-          parseFloat(String(latitude)),
+          parseFloat(params.longitude),
+          parseFloat(params.latitude),
         ],
       },
-      maxDistance: +radius * 1000,
+      maxDistance: params.radius * 1000,
       distanceField: "distance",
       spherical: true,
     },
   };
+
+  const marinePipeLine = params.marineId
+    ? {
+        marineId: new ObjectId(params.marineId),
+      }
+    : {};
+
   const aggregation = [
     {
+      $match: marinePipeLine,
+    },
+
+    {
       $match: {
-        $and: [
-          { draught: { $lte: draught } },
-          { length: { $lte: length } },
-          { width: { $lte: width } },
-          { price: { $gte: +min, $lte: +max } },
-        ],
+        draught: { $gte: params.draught },
+        length: { $gte: params.length },
+        width: { $gte: params.width },
+        price: { $gte: params.min, $lte: params.max },
+        _id: {
+          $nin: reserverdSpots.map(({ spotId }) => new ObjectId(spotId)),
+        },
       },
     },
 
@@ -69,14 +115,19 @@ async function clientSpots(req: NowRequest, res: NowResponse) {
         distance: { $first: "$distance" },
         marineId: { $first: "$marineId" },
         name: { $first: "$marineName" },
+        price: { $first: "$price" },
+        services: { $first: "$services" },
       },
     },
+    { $sort: { price: 1 } },
   ];
 
   const response = await db
     .collection("spots")
     .aggregate(
-      longitude && latitude ? [geoPipeLine, ...aggregation] : aggregation
+      params.longitude && params.latitude
+        ? [geoPipeLine, ...aggregation]
+        : aggregation
     )
     .toArray();
 
@@ -87,12 +138,9 @@ export async function getSpots(req: NowRequest, res: NowResponse) {
   switch (req.query.type) {
     case "client":
       return await clientSpots(req, res);
-    case "admin":
-      return await adminSpots(req, res);
 
     default:
-      res.json({});
-      break;
+      return await adminSpots(req, res);
   }
 }
 
