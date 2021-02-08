@@ -1,5 +1,5 @@
 import { NowRequest, NowResponse } from "@vercel/node";
-import * as spotService from "../services/spotService";
+import * as spotService from "../../services/spotService";
 
 export default async function (req: NowRequest, res: NowResponse) {
   switch (req.method) {

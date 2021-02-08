@@ -1,8 +1,6 @@
 import { NowRequest, NowResponse } from "@vercel/node";
-import { ObjectID, ObjectId } from "mongodb";
-import { connectToDatabase } from "../mongoHelper";
-import { validateToken } from "../token";
-import { getCursorOffset } from "../utils";
+import { ObjectId } from "mongodb";
+import { connectToDatabase } from "../helpers/mongoHelper";
 import * as yup from "yup";
 import startOfDay from "date-fns/startOfDay";
 import { endOfDay } from "date-fns";
@@ -38,8 +36,9 @@ const reserveASpotParams = yup
   .shape({
     fromDate: yup.number().required(),
     toDate: yup.number().required(),
-    userId: yup.string().min(24).max(24).required(),
+    userId: yup.string().min(24).max(24),
     spotId: yup.string().min(24).max(24),
+    marineId: yup.string().min(24).max(24).required(),
   });
 export async function reserveASpot(req: NowRequest, res: NowResponse) {
   const params = await reserveASpotParams
@@ -48,45 +47,51 @@ export async function reserveASpot(req: NowRequest, res: NowResponse) {
   const isValid = await getReservationParams.isValid(params);
   if (!isValid) res.json({ [params.path]: params.message });
 
+  const tmpArr = [req.body.fromDate, req.body.toDate];
+  const [_from, _to] = tmpArr.sort();
+  const from = startOfDay(_from);
+  const to = endOfDay(_to);
+
   const db = await connectToDatabase();
+  // need to find a date between my range
+  // example i need a reservation for 1/02 - 10/02
+  // if a reservation is for 2/02 - 11/02 we exclude it
   const reservedSpots = await db
     .collection("reservations")
     .find({
-      fromDate: { $gte: req.query.fromDate },
-      toDate: { $lt: req.query.toDate },
+      $or: [
+        { $and: [{ fromDate: { $gte: from } }, { fromDate: { $lte: to } }] },
+        { $and: [{ toDate: { $gte: from } }, { toDate: { $lte: to } }] },
+      ],
     })
     .project({
-      _id: true,
+      spotId: true,
     })
     .toArray();
-
-  console.log(reservedSpots);
-
   const spot = await db
     .collection("spots")
     .find(
       {
         _id: {
-          $nin: reservedSpots.map((id) => new ObjectId(id)),
+          $nin: reservedSpots.map(({ spotId }) => new ObjectId(spotId)),
         },
       },
       {
         limit: 1,
-        fields: {
-          _id: 1,
-        },
       }
     )
+    .sort({ price: 1 })
     .toArray();
 
   await db.collection("reservations").insertOne({
-    fromDate: startOfDay(req.body.fromDate),
-    toDate: endOfDay(req.body.toDate),
+    fromDate: from,
+    toDate: to,
+    status: "PENDING",
     userId: new ObjectId(req.body.userId),
     spotId: new ObjectId(spot[0]._id),
   });
 
   res.json({
-    msg: "booked successfully",
+    spot: spot[0],
   });
 }

@@ -1,9 +1,9 @@
 import { ObjectId, ObjectID } from "mongodb";
 import * as yup from "yup";
 import bcrypt from "bcrypt";
-import { connectToDatabase } from "../mongoHelper";
-import { permissions } from "../permissions";
-import { getLoginResponse } from "../token";
+import { connectToDatabase } from "../helpers/mongoHelper";
+import { permissions } from "../helpers/permissions";
+import { getLoginResponse } from "../helpers/token";
 import { NowRequest, NowResponse } from "@vercel/node";
 
 export async function login(req: NowRequest, res: NowResponse) {

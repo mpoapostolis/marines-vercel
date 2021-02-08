@@ -1,8 +1,8 @@
 import { NowRequest, NowResponse } from "@vercel/node";
 import { ObjectId } from "mongodb";
-import { connectToDatabase } from "../mongoHelper";
-import { validateToken } from "../token";
-import { getCursorOffset } from "../utils";
+import { connectToDatabase } from "../helpers/mongoHelper";
+import { validateToken } from "../helpers/token";
+import { getCursorOffset } from "../helpers/utils";
 
 async function adminSpots(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res);
@@ -67,6 +67,7 @@ async function clientSpots(req: NowRequest, res: NowResponse) {
         _id: "$marineName",
         count: { $sum: 1 },
         distance: { $first: "$distance" },
+        marineId: { $first: "$marineId" },
         name: { $first: "$marineName" },
       },
     },
@@ -83,35 +84,15 @@ async function clientSpots(req: NowRequest, res: NowResponse) {
 }
 
 export async function getSpots(req: NowRequest, res: NowResponse) {
-  if (req.query.type === "client") {
-    return await clientSpots(req, res);
-  } else {
-    return await adminSpots(req, res);
-  }
-}
+  switch (req.query.type) {
+    case "client":
+      return await clientSpots(req, res);
+    case "admin":
+      return await adminSpots(req, res);
 
-export async function getSpotById(req: NowRequest, res: NowResponse) {
-  await validateToken(req, res, "view:spots");
-
-  const db = await connectToDatabase();
-  const response = await db.collection("spots").findOne({
-    _id: new ObjectId(`${req.query.id}`),
-  });
-  res.json(response);
-}
-
-export async function deleteSpotById(req: NowRequest, res: NowResponse) {
-  const user = await validateToken(req, res, "edit:spots");
-
-  const db = await connectToDatabase();
-  try {
-    await db.collection("spots").deleteOne({
-      _id: new ObjectId(`${req.query.id}`),
-      marineId: new ObjectId(user.marineId),
-    });
-    res.status(204).send("spots deleted successfully");
-  } catch (error) {
-    res.status(400).json(error);
+    default:
+      res.json({});
+      break;
   }
 }
 

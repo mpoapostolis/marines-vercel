@@ -1,9 +1,9 @@
 import { NowRequest, NowResponse } from "@vercel/node";
 import { ObjectId } from "mongodb";
 
-import { connectToDatabase } from "../mongoHelper";
-import { validateToken } from "../token";
-import { getCursorOffset } from "../utils";
+import { connectToDatabase } from "../helpers/mongoHelper";
+import { validateToken } from "../helpers/token";
+import { getCursorOffset } from "../helpers/utils";
 
 async function getServiceById(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res, "view:services");

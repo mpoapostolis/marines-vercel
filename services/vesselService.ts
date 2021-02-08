@@ -1,8 +1,8 @@
 import { NowRequest, NowResponse } from "@vercel/node";
-import { validateToken } from "../token";
-import { connectToDatabase } from "../mongoHelper";
+import { validateToken } from "../helpers/token";
+import { connectToDatabase } from "../helpers/mongoHelper";
 import { ObjectId } from "mongodb";
-import { getCursorOffset } from "../utils";
+import { getCursorOffset } from "../helpers/utils";
 
 export async function getVessels(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res, "view:vessels");
@@ -34,7 +34,6 @@ export async function getVesselById(req: NowRequest, res: NowResponse) {
 export async function updateVessel(req: NowRequest, res: NowResponse) {
   const user = await validateToken(req, res, "edit:vessels");
   const db = await connectToDatabase();
-  console.log(user);
   const id = await db.collection("vessels").updateOne(
     {
       _id: new ObjectId(`${req.query.id}`),
