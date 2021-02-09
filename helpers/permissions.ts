@@ -4,7 +4,10 @@ export const permissions = {
     "edit:spots",
     "view:marines",
     "edit:marines",
+
     "view:reservations",
+    "edit:reservations",
+
     "view:vessels",
     "edit:vessels",
     "view:services",
@@ -14,6 +17,7 @@ export const permissions = {
     "view:spots",
     "edit:spots",
     "view:reservations",
+    "edit:reservations",
     "view:services",
     "edit:services",
   ],

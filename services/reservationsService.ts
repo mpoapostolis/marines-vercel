@@ -4,30 +4,46 @@ import { connectToDatabase } from "../helpers/mongoHelper";
 import * as yup from "yup";
 import startOfDay from "date-fns/startOfDay";
 import { endOfDay } from "date-fns";
+import { validateToken } from "../helpers/token";
 
-const getReservationParams = yup.object().noUnknown(true).shape({
-  fromDate: yup.number().required(),
-  toDate: yup.number().required(),
-});
+const getReservationParams = yup
+  .object()
+  .noUnknown(true)
+  .shape({
+    fromDate: yup.number(),
+    toDate: yup.number(),
+    status: yup.string().oneOf(["PENDING", "ACTIVE", "COMPLETE"]),
+  });
 
 export async function getReservations(req: NowRequest, res: NowResponse) {
-  // await validateToken(req, res, "edit:marines");
+  const user = await validateToken(req, res, "view:reservations");
 
   const params = await getReservationParams
     .validate(req.query)
     .catch((err) => err);
   const isValid = await getReservationParams.isValid(params);
-  if (!isValid) res.json({ [params.path]: params.message });
+  if (!isValid) res.status(400).json({ [params.path]: params.message });
+
+  const findObj = {};
+  if (params.status) findObj["status"] = params.status;
+  if (params.fromDate && params.toDate) {
+    findObj["fromDate"] = { $gte: params.fromDate };
+    findObj["toDate"] = { $lte: params.fromDate };
+  }
 
   const db = await connectToDatabase();
-  const data = await db
-    .collection("reservations")
-    .find({
-      date: { $not: { $gte: req.query.fromDate, $lt: req.query.toDate } },
-    })
-    .toArray();
+  const results = await db.collection("reservations").find({
+    marineId: new ObjectId(user.marineId),
+    ...findObj,
+  });
 
-  res.json(data);
+  const total = await results.count();
+  const data = await results.toArray();
+
+  res.json({
+    data,
+    total,
+  });
 }
 
 const reserveASpotParams = yup
@@ -37,6 +53,7 @@ const reserveASpotParams = yup
     fromDate: yup.number().required(),
     toDate: yup.number().required(),
     userId: yup.string().min(24).max(24),
+    name: yup.string(),
     spotId: yup.string().min(24).max(24),
     marineId: yup.string().min(24).max(24).required(),
   });
@@ -92,7 +109,11 @@ export async function reserveASpot(req: NowRequest, res: NowResponse) {
     toDate: to,
     status: "PENDING",
     userId: new ObjectId(params.userId),
+    marineId: new ObjectId(params.marineId),
     spotId: new ObjectId(spot[0]._id),
+    spotLabel: spot[0].label,
+    spotNumber: spot[0].number,
+    spotPrice: spot[0].price,
   });
 
   res.json({
