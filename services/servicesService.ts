@@ -17,7 +17,7 @@ async function getServiceById(req: NowRequest, res: NowResponse) {
 }
 
 export async function getServices(req: NowRequest, res: NowResponse) {
-  const user = await validateToken(req, res, "view:services");
+  // const user = await validateToken(req, res, "view:services");
   // get by id do cause i dont want to spend another serverless function we have limit to 12
   if (req.query.id) return await getServiceById(req, res);
 
@@ -26,7 +26,7 @@ export async function getServices(req: NowRequest, res: NowResponse) {
   const response = await db
     .collection("services")
     .find({
-      $or: [{ marineId: new ObjectId(user.marineId) }, { marineId: "public" }],
+      // $or: [{ marineId: new ObjectId(user.marineId) }, { marineId: "public" }],
     })
     .skip(params.offset)
     .limit(params.limit);

@@ -35,6 +35,9 @@ const clientSpotParam = yup
     min: yup.number().default(-Infinity),
     max: yup.number().default(Infinity),
     width: yup.number().default(-Infinity),
+    latitude: yup.number(),
+    longitude: yup.number(),
+    sort: yup.string().oneOf(["price", "distance", "count"]).default("price"),
   });
 
 async function clientSpots(req: NowRequest, res: NowResponse) {
@@ -119,8 +122,10 @@ async function clientSpots(req: NowRequest, res: NowResponse) {
         services: { $first: "$services" },
       },
     },
-    { $sort: { price: 1 } },
+    { $sort: { [params.sort]: 1 } },
   ];
+
+  console.log(params.longitude && params.latitude);
 
   const response = await db
     .collection("spots")

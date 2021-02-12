@@ -6,10 +6,13 @@ import { permissions } from "../helpers/permissions";
 import { getLoginResponse } from "../helpers/token";
 import { NowRequest, NowResponse } from "@vercel/node";
 
-export async function login(req: NowRequest, res: NowResponse) {
+export async function loginUser(req: NowRequest, res: NowResponse) {
   const db = await connectToDatabase();
   const err = () =>
-    res.status(400).json({ msg: "username or password is not correct" });
+    res.status(400).json({
+      key: "userName",
+      msg: "username or password is not correct",
+    });
 
   const existingUser = await db
     .collection("users")
@@ -35,9 +38,9 @@ let userSchema = yup
     email: yup.string().email(),
   });
 
-export async function createUser(body) {
-  const user = await userSchema.validate(body).catch((err) => err);
-  const isValid = await userSchema.isValid(body);
+export async function createUser(req: NowRequest, res: NowResponse) {
+  const user = await userSchema.validate(req.body).catch((err) => err);
+  const isValid = await userSchema.isValid(req.body);
   if (!isValid) return { [user.path]: user.message };
 
   const db = await connectToDatabase();
@@ -45,14 +48,22 @@ export async function createUser(body) {
   if (user.marineId) {
     const existingMarine = await db
       .collection("marines")
-      .findOne({ _id: new ObjectID(body.marineId) });
-    if (!existingMarine) return { msg: "Invalid marine id" };
+      .findOne({ _id: new ObjectID(req.body.marineId) });
+    if (!existingMarine)
+      return res.status(400).json({
+        key: "marineId",
+        msg: "Invalid marine id",
+      });
   }
 
   const existingUser = await db
     .collection("users")
     .findOne({ userName: user.userName });
-  if (existingUser) return { msg: `user ${user.userName} already exists` };
+  if (existingUser)
+    return res.status(409).json({
+      key: "userName",
+      msg: `user ${user.userName} already exists`,
+    });
 
   const password = await bcrypt.hash(user.password, 10);
   const userBody = {
@@ -67,5 +78,5 @@ export async function createUser(body) {
 
   await (await db.collection("users").insertOne(userBody)).ops;
 
-  return { msg: "user created successfully" };
+  res.status(201).json({ msg: "user created successfully" });
 }
